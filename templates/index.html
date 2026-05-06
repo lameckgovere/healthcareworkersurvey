@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gweru Health Worker Survey | Advanced Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Roboto, system-ui, sans-serif; }
+        body { background: linear-gradient(135deg, #e0eef7 0%, #f5f7fc 100%); padding: 24px; min-height: 100vh; }
+        .container { max-width: 1600px; margin: 0 auto; }
+        .card { background: rgba(255,255,255,0.95); backdrop-filter: blur(2px); border-radius: 32px; padding: 1.5rem 2rem; box-shadow: 0 20px 35px -10px rgba(0,0,0,0.1), 0 0 0 1px rgba(156, 180, 194, 0.1); transition: all 0.2s; margin-bottom: 28px; }
+        .btn-primary { background: linear-gradient(135deg, #2c7da0, #1f5e7a); color: white; border: none; padding: 10px 28px; border-radius: 60px; font-weight: 600; cursor: pointer; transition: 0.2s; box-shadow: 0 4px 8px rgba(0,0,0,0.05); }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 16px rgba(0,0,0,0.1); background: linear-gradient(135deg, #1f5e7a, #154b61); }
+        .btn-secondary { background: #eef2f5; color: #1e4660; border: none; padding: 8px 22px; border-radius: 60px; font-weight: 500; cursor: pointer; transition: 0.2s; }
+        .btn-secondary:hover { background: #e2e8f0; }
+        .hidden { display: none; }
+        .section-title { font-size: 1.5rem; font-weight: 700; margin: 1.5rem 0 1.2rem; color: #0b3b4f; border-left: 6px solid #2c7da0; padding-left: 20px; background: linear-gradient(90deg, #f0f7fc, transparent); border-radius: 0 40px 40px 0; }
+        .rating-row { display: flex; flex-wrap: wrap; justify-content: space-between; margin: 0.8rem 0; gap: 16px; background: #ffffff; padding: 12px 20px; border-radius: 28px; box-shadow: 0 2px 6px rgba(0,0,0,0.03); border: 1px solid #e9f0f5; }
+        .rating-label { flex: 2; font-weight: 600; color: #1f5068; }
+        .rating-options { display: flex; gap: 12px; flex-wrap: wrap; }
+        .rating-options label { background: #f8fafd; padding: 6px 16px; border-radius: 60px; border: 1px solid #dce7ef; cursor: pointer; font-weight: 500; transition: 0.1s; }
+        .rating-options label:hover { background: #e6f0f7; border-color: #2c7da0; }
+        .scale-hint { font-size: 0.75rem; color: #2c7da0; margin-left: 12px; font-weight: 500; }
+        .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px,1fr)); gap: 24px; margin: 24px 0; }
+        .stat-card { padding: 1.2rem; border-radius: 28px; background: white; border-left: 10px solid; box-shadow: 0 10px 20px -8px rgba(0,0,0,0.1); transition: 0.2s; }
+        .stat-card:hover { transform: translateY(-4px); }
+        .green { border-left-color: #2b9348; background: linear-gradient(145deg, #ffffff, #f8fff9); }
+        .orange { border-left-color: #e9c46a; background: linear-gradient(145deg, #ffffff, #fffcf0); }
+        .red { border-left-color: #e76f51; background: linear-gradient(145deg, #ffffff, #fff6f3); }
+        .badge { display: inline-block; padding: 5px 14px; border-radius: 50px; font-size: 0.75rem; font-weight: 700; }
+        .badge-green { background: #d9f0e1; color: #1e6f3f; }
+        .badge-orange { background: #fff0db; color: #b4652a; }
+        .badge-red { background: #ffe3df; color: #bc4e3b; }
+        .alert-card { background: #fffef7; border-left: 8px solid #e9c46a; padding: 16px; border-radius: 28px; margin: 12px 0; box-shadow: 0 2px 6px rgba(0,0,0,0.03); }
+        .filters { display: flex; gap: 20px; flex-wrap: wrap; align-items: flex-end; background: #fff; padding: 16px 24px; border-radius: 60px; margin-bottom: 20px; }
+        .filters select, .filters input { padding: 10px 20px; border-radius: 60px; border: 1px solid #cbdde9; background: white; font-size: 0.9rem; }
+        .flex-between { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; }
+        .explanation-box { background: #eef5fa; padding: 14px 24px; border-radius: 28px; margin: 16px 0; font-size: 0.95rem; border-left: 5px solid #2c7da0; }
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); backdrop-filter: blur(3px); align-items: center; justify-content: center; z-index: 2000; }
+        .modal-card { background: white; border-radius: 48px; padding: 2rem; width: 90%; max-width: 450px; text-align: center; box-shadow: 0 30px 40px rgba(0,0,0,0.2); }
+        .modal-card input, .modal-card textarea { width: 100%; padding: 12px; margin: 15px 0; border-radius: 60px; border: 1px solid #cbdde9; }
+        .priority-key { display: flex; gap: 20px; margin-top: 10px; font-size: 0.8rem; justify-content: center; }
+        /* Wider input boxes */
+        input, select, textarea { width: 100%; padding: 14px 18px; border-radius: 60px; border: 1px solid #cbdde9; font-size: 1rem; }
+        textarea { border-radius: 28px; }
+        @media (max-width: 700px) { .rating-row { flex-direction: column; } .filters { flex-direction: column; align-items: stretch; } }
+    </style>
+</head>
+<body>
+<div class="container" id="app">
+    <!-- Landing Page -->
+    <div id="landingPage">
+        <div class="card" style="text-align: center; max-width: 800px; margin: 60px auto; background: linear-gradient(145deg, #ffffff, #f8fefd);">
+            <div style="background: #eef3fc; width: 100px; height: 100px; border-radius: 60px; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 20px;">
+                <i class="fas fa-notes-medical" style="font-size: 56px; color:#2c7da0;"></i>
+            </div>
+            <h2 style="color: #1c5a74;">Gweru District Health Team</h2>
+            <h1 style="margin: 20px 0; font-size: 2.5rem; background: linear-gradient(135deg, #1f5e7a, #2c7da0); -webkit-background-clip: text; background-clip: text; color: transparent;">Healthcare Worker Satisfaction Survey</h1>
+            <div style="background:#eef2fa; padding:18px; border-radius:80px; margin:24px 0;">
+                <i class="fas fa-lock"></i> Your feedback is anonymous and helps improve workplace conditions
+            </div>
+            <div style="display: flex; gap: 24px; justify-content: center; flex-wrap: wrap;">
+                <button class="btn-primary" id="startSurveyBtn"><i class="fas fa-clipboard-list"></i> Start Survey</button>
+                <button class="btn-secondary" id="adminLoginBtn"><i class="fas fa-chalkboard-user"></i> Admin Login</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Survey Page (wider inputs) -->
+    <div id="surveyPage" class="hidden">
+        <div class="card">
+            <div class="flex-between"><h2><i class="fas fa-heartbeat" style="color:#2c7da0;"></i> Satisfaction Survey</h2><button class="btn-secondary" id="cancelSurveyBtn">Cancel</button></div>
+            <form id="surveyForm">
+                <div class="section-title">Background</div>
+                <div style="margin-bottom: 24px;">
+                    <label><strong>Your role / position</strong></label>
+                    <input type="text" id="roleText" placeholder="e.g., Registered Nurse, Clinical Officer, Cleaner" required style="width:100%;">
+                </div>
+                <div style="margin-bottom: 24px;">
+                    <label><strong>Years of service</strong></label>
+                    <select id="yearsSelect" required style="width:100%;"><option value="">Select</option><option>&lt;1 year</option><option>1-5 years</option><option>6-10 years</option><option>11-15 years</option><option>16+ years</option></select>
+                </div>
+                <div id="dynamicQuestions"></div>
+                <div class="section-title">Your Voice – Open Ended</div>
+                <textarea id="challengeText" rows="3" placeholder="What is the biggest challenge you face?" style="width:100%;"></textarea><br><br>
+                <textarea id="improveText" rows="3" placeholder="What is one thing you would improve in this facility?" style="width:100%;"></textarea><br><br>
+                <textarea id="additionalText" rows="3" placeholder="Any additional comments?" style="width:100%;"></textarea><br>
+                <button type="submit" class="btn-primary"><i class="fas fa-paper-plane"></i> Submit Survey</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="thankyouPage" class="hidden">
+        <div class="card" style="text-align: center;"><i class="fas fa-check-circle" style="font-size: 70px; color:#2b9348;"></i><h2 style="margin: 20px 0;">Thank You for Your Feedback!</h2><p>Your responses have been recorded.</p><button class="btn-primary" id="homeBtn">Back to Home</button></div>
+    </div>
+
+    <!-- Admin Dashboard -->
+    <div id="adminDashboard" class="hidden">
+        <div class="flex-between"><h2><i class="fas fa-chart-line"></i> Admin Dashboard</h2><div><button id="backupBtn" class="btn-secondary"><i class="fas fa-download"></i> Backup Data</button><button id="recoverBtn" class="btn-secondary"><i class="fas fa-upload"></i> Recover Data</button><button id="downloadCsvBtn" class="btn-secondary"><i class="fas fa-file-excel"></i> Export CSV</button><button id="genReportBtn" class="btn-secondary"><i class="fas fa-file-alt"></i> Generate Report</button><button id="logoutAdminBtn" class="btn-secondary"><i class="fas fa-sign-out-alt"></i> Logout</button></div></div>
+
+        <div class="filters">
+            <label><i class="fas fa-filter"></i> Role:</label>
+            <select id="filterRole"><option value="all">All roles</option></select>
+            <label><i class="fas fa-calendar"></i> Period (Month/Year):</label>
+            <input type="month" id="filterMonth">
+            <button id="applyFiltersBtn" class="btn-secondary">Apply</button>
+            <button id="resetFiltersBtn" class="btn-secondary">Reset</button>
+        </div>
+
+        <div class="card"><h3><i class="fas fa-chalkboard-user"></i> Executive Summary</h3><div id="executiveSummaryText" class="explanation-box">Loading...</div></div>
+
+        <div class="stat-grid" id="kpiCards"></div>
+
+        <div class="card">
+            <div class="flex-between"><h3><i class="fas fa-exclamation-triangle"></i> Priority Issues & Alerts</h3><div class="priority-key"><span><span style="background:#e76f51; width:12px;height:12px;display:inline-block;border-radius:50%;"></span> High Priority (&lt;2.5)</span> <span><span style="background:#e9c46a; width:12px;height:12px;display:inline-block;border-radius:50%;"></span> Moderate Priority (2.5–3.49)</span></div></div>
+            <div id="alertsList"></div>
+        </div>
+
+        <div style="display: flex; flex-wrap: wrap; gap: 24px;">
+            <div class="card" style="flex:2"><canvas id="sectionChart"></canvas><p class="scale-hint">Section scores (best to worst)</p></div>
+            <div class="card" style="flex:1"><canvas id="trendChart"></canvas><p class="scale-hint">Overall satisfaction trend over time</p></div>
+        </div>
+
+        <div class="card"><h3><i class="fas fa-chart-pie"></i> Response Statistics</h3><div id="statsPanel"></div></div>
+
+        <div class="card"><h3><i class="fas fa-comment-dots"></i> Comment Insights & Sentiment</h3><div id="sentimentBox"></div><div id="themesBox"></div></div>
+
+        <div class="card"><h3><i class="fas fa-lightbulb"></i> Recommendations</h3><div id="recommendationsList"></div></div>
+
+        <button id="resetDataBtn" style="background:#f8d7da; border:1px solid #f5c6cb; padding:10px 28px; border-radius:60px; margin-top:10px;">⚠️ Reset All Data</button>
+    </div>
+
+    <!-- Report Page -->
+    <div id="reportPage" class="hidden">
+        <div class="card">
+            <div class="flex-between"><h2>📄 Full Satisfaction Report</h2><div><button id="backToDashboard" class="btn-secondary">← Back</button><button id="printReportBtn" class="btn-secondary"><i class="fas fa-print"></i> Print</button></div></div>
+            <div id="reportContent"></div>
+        </div>
+    </div>
+</div>
+
+<!-- Admin Login Modal (with autocomplete off and clear on open) -->
+<div id="adminModal" class="modal-overlay">
+    <div class="modal-card">
+        <i class="fas fa-lock" style="font-size: 48px; color:#2c7da0;"></i>
+        <h3 style="margin: 15px 0;">Admin Login</h3>
+        <input type="password" id="adminPassword" placeholder="Enter password" autocomplete="new-password">
+        <div style="display:flex; gap:12px; justify-content:center;">
+            <button id="modalLoginBtn" class="btn-primary">Login</button>
+            <button id="modalCancelBtn" class="btn-secondary">Cancel</button>
+        </div>
+    </div>
+</div>
+
+<!-- Message Modal -->
+<div id="messageModal" class="modal-overlay">
+    <div class="modal-card">
+        <i class="fas fa-info-circle" style="font-size: 48px;"></i>
+        <h3 id="modalTitle" style="margin: 10px 0;">Message</h3>
+        <p id="modalMessage"></p>
+        <button id="closeMessageModal" class="btn-primary">OK</button>
+    </div>
+</div>
+
+<script>
+    const API_BASE = window.location.origin;
+    let rawSurveys = [];
+    let barChart, trendChart;
+    let adminLogged = false;
+
+    // Helper: fetch surveys
+    async function fetchSurveys() {
+        const res = await fetch(`${API_BASE}/api/surveys`);
+        rawSurveys = await res.json();
+        return rawSurveys;
+    }
+
+    function filterSurveys(surveys, roleFilter, monthFilter) {
+        return surveys.filter(s => {
+            if (roleFilter !== 'all' && s.role !== roleFilter) return false;
+            if (monthFilter) {
+                let date = new Date(s.timestamp);
+                let ym = `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}`;
+                if (ym !== monthFilter) return false;
+            }
+            return true;
+        });
+    }
+
+    // Sentiment analysis (robust)
+    function sentimentAnalysis(text) {
+        if (!text) return "neutral";
+        let pos = ["good","great","excellent","helpful","supportive","safe","clean","manageable","valued","satisfied","opportunity","improve","better","adequate","enough","listened","appreciate","committed","positive","happy"];
+        let neg = ["shortage","lack","unsafe","stress","burnout","understaffed","poor","bad","difficult","frustrating","unheard","ignored","no","never","insufficient","low","toxic","overworked","exhausting","turnover","problem","challenge"];
+        let words = text.toLowerCase().split(/\W+/);
+        let posCount = words.filter(w=>pos.includes(w)).length;
+        let negCount = words.filter(w=>neg.includes(w)).length;
+        if (posCount > negCount) return "positive";
+        if (negCount > posCount) return "negative";
+        return "neutral";
+    }
+
+    // Averages
+    function avgScores(surveys) {
+        if (!surveys.length) return { workEnv:0, workload:0, management:0, jobSat:0, training:0 };
+        let sums = { workEnv:0, workload:0, management:0, jobSat:0, training:0, count:0 };
+        surveys.forEach(s => {
+            for (let [k,arr] of Object.entries(s.ratings)) sums[k] += arr.reduce((a,b)=>a+b,0)/arr.length;
+            sums.count++;
+        });
+        let res = {};
+        for (let k of Object.keys(sums)) if (k!="count") res[k] = sums[k]/sums.count;
+        return res;
+    }
+    function overallScore(surveys) { let av = avgScores(surveys); let vals = Object.values(av); return vals.length ? vals.reduce((a,b)=>a+b,0)/vals.length : 0; }
+    function colorCode(val){ if(val<2.5) return "red"; if(val<3.5) return "orange"; return "green"; }
+    function textScore(val){ if(val<2.5) return "Problem"; if(val<3.5) return "Needs improvement"; return "Good"; }
+
+    // Modal helpers
+    function showModal(title, message) {
+        document.getElementById("modalTitle").innerText = title;
+        document.getElementById("modalMessage").innerHTML = message;
+        document.getElementById("messageModal").style.display = "flex";
+    }
+    function closeModal() { document.getElementById("messageModal").style.display = "none"; }
+    document.getElementById("closeMessageModal").onclick = closeModal;
+    window.onclick = function(e) {
+        if (e.target === document.getElementById("messageModal")) closeModal();
+        if (e.target === document.getElementById("adminModal")) {
+            document.getElementById("adminPassword").value = '';
+            document.getElementById("adminModal").style.display = "none";
+        }
+    };
+
+    // Password helper (not saved)
+    async function getAdminPasswordForAction() {
+        return new Promise((resolve) => {
+            let modal = document.createElement("div");
+            modal.className = "modal-overlay";
+            modal.style.display = "flex";
+            modal.innerHTML = `<div class="modal-card"><i class="fas fa-lock"></i><h3>Admin Password</h3><input type="password" id="tempPwd" placeholder="Password" autocomplete="new-password"><div style="display:flex; gap:12px; justify-content:center; margin-top:15px;"><button id="confirmPwd" class="btn-primary">OK</button><button id="cancelPwd" class="btn-secondary">Cancel</button></div></div>`;
+            document.body.appendChild(modal);
+            document.getElementById("confirmPwd").onclick = () => {
+                let pwd = document.getElementById("tempPwd").value;
+                modal.remove();
+                resolve(pwd);
+            };
+            document.getElementById("cancelPwd").onclick = () => { modal.remove(); resolve(null); };
+        });
+    }
+
+    // Reset: clear all data, re-render empty dashboard
+    async function resetAllData() {
+        let pwd = await getAdminPasswordForAction();
+        if (!pwd) return;
+        const res = await fetch(`${API_BASE}/admin/reset`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ password:pwd }) });
+        if (res.ok) {
+            showModal("Data Reset", "All survey data has been cleared. Dashboard will now show empty state.");
+            await fetchSurveys(); // refresh rawSurveys
+            if (adminLogged) renderDashboardEmpty(); // force empty render
+        } else showModal("Reset Failed", "Wrong password or server error.");
+    }
+
+    function renderDashboardEmpty() {
+        document.getElementById("kpiCards").innerHTML = "<div class='card'>No survey data available. Submit responses to see insights.</div>";
+        document.getElementById("executiveSummaryText").innerHTML = "No data yet. Once surveys are submitted, insights will appear here.";
+        document.getElementById("alertsList").innerHTML = "<p>No data to analyse.</p>";
+        if (barChart) barChart.destroy();
+        if (trendChart) trendChart.destroy();
+        let ctx = document.getElementById("sectionChart").getContext("2d");
+        barChart = new Chart(ctx, { type:"bar", data:{ labels: ["Work Environment","Workload","Management","Job Satisfaction","Training"], datasets:[{ label:"No data", data:[0,0,0,0,0] }] }, options:{ scales:{ y:{ min:0, max:5 } } } });
+        let trendCtx = document.getElementById("trendChart").getContext("2d");
+        trendChart = new Chart(trendCtx, { type:"line", data:{ labels:[], datasets:[] } });
+        document.getElementById("statsPanel").innerHTML = "<p>No responses recorded.</p>";
+        document.getElementById("sentimentBox").innerHTML = "<p>No comments to analyse.</p>";
+        document.getElementById("themesBox").innerHTML = "<p>Submit surveys to see comment themes.</p>";
+        document.getElementById("recommendationsList").innerHTML = "<p>No data to generate recommendations.</p>";
+        // Update role dropdown to only "All roles"
+        let roleSelect = document.getElementById("filterRole");
+        roleSelect.innerHTML = '<option value="all">All roles</option>';
+    }
+
+    // Backup
+    function backupData() {
+        let dataStr = JSON.stringify(rawSurveys, null, 2);
+        let blob = new Blob([dataStr], {type: "application/json"});
+        let url = URL.createObjectURL(blob);
+        let a = document.createElement("a");
+        a.href = url;
+        a.download = `gweru_survey_backup_${new Date().toISOString().slice(0,19)}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        showModal("Backup Complete", "Survey data has been exported as JSON file.");
+    }
+
+    // Recover
+    async function recoverData() {
+        let input = document.createElement("input");
+        input.type = "file";
+        input.accept = "application/json";
+        input.onchange = async (e) => {
+            let file = e.target.files[0];
+            if (!file) return;
+            let reader = new FileReader();
+            reader.onload = async (ev) => {
+                try {
+                    let imported = JSON.parse(ev.target.result);
+                    if (!Array.isArray(imported)) throw new Error("Invalid format");
+                    let pwd = await getAdminPasswordForAction();
+                    if (!pwd) return;
+                    const res = await fetch(`${API_BASE}/admin/restore`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ password: pwd, data: imported })
+                    });
+                    if (res.ok) {
+                        showModal("Recover Complete", "Data restored from backup. Refresh dashboard.");
+                        await fetchSurveys();
+                        if (adminLogged) await renderDashboard();
+                    } else {
+                        showModal("Recover Failed", "Wrong password or server error.");
+                    }
+                } catch(err) { showModal("Error", "Invalid backup file."); }
+            };
+            reader.readAsText(file);
+        };
+        input.click();
+    }
+
+    // Export CSV
+    async function exportCSV() {
+        let pwd = await getAdminPasswordForAction();
+        if (!pwd) return;
+        window.location.href = `${API_BASE}/admin/export/csv?password=${encodeURIComponent(pwd)}`;
+    }
+
+    // Main render (full data)
+    async function renderDashboard() {
+        let allSurveys = await fetchSurveys();
+        const roleFilter = document.getElementById("filterRole").value;
+        const monthFilter = document.getElementById("filterMonth").value;
+        let surveys = filterSurveys(allSurveys, roleFilter, monthFilter);
+
+        if (!surveys.length) {
+            renderDashboardEmpty();
+            return;
+        }
+
+        let overall = overallScore(surveys);
+        let avgs = avgScores(surveys);
+
+        // KPI cards (including Job Satisfaction)
+        let kpiHtml = `<div class="stat-card ${colorCode(overall)}"><h3>Overall Satisfaction</h3><div style="font-size:2rem">${overall.toFixed(1)}/5</div><span class="badge badge-${colorCode(overall)}">${textScore(overall)}</span></div>`;
+        kpiHtml += `<div class="stat-card ${colorCode(avgs.workEnv)}"><h3>Work Environment</h3><div>${avgs.workEnv.toFixed(1)}</div></div>`;
+        kpiHtml += `<div class="stat-card ${colorCode(avgs.workload)}"><h3>Workload</h3><div>${avgs.workload.toFixed(1)}</div></div>`;
+        kpiHtml += `<div class="stat-card ${colorCode(avgs.management)}"><h3>Management</h3><div>${avgs.management.toFixed(1)}</div></div>`;
+        kpiHtml += `<div class="stat-card ${colorCode(avgs.jobSat)}"><h3>Job Satisfaction</h3><div>${avgs.jobSat.toFixed(1)}</div></div>`;
+        kpiHtml += `<div class="stat-card ${colorCode(avgs.training)}"><h3>Training & Growth</h3><div>${avgs.training.toFixed(1)}</div></div>`;
+        document.getElementById("kpiCards").innerHTML = kpiHtml;
+
+        // Executive Summary
+        let improvementItems = [];
+        for (let [name, key] of [["Workload","workload"],["Management","management"],["Training","training"],["Work Environment","workEnv"],["Job Satisfaction","jobSat"]]) {
+            if (avgs[key] < 3.5) improvementItems.push({ name, score: avgs[key], color: colorCode(avgs[key]) });
+        }
+        improvementItems.sort((a,b) => (a.color === 'red' ? -1 : (a.color === 'orange' && b.color === 'green' ? -1 : 1)));
+        let summaryText = `Overall satisfaction is ${overall.toFixed(1)}. `;
+        if (improvementItems.length) {
+            summaryText += `Areas needing attention: `;
+            summaryText += improvementItems.map(item => `${item.name} (${item.score.toFixed(1)} - ${item.color === 'red' ? 'critical' : 'needs improvement'})`).join(', ');
+        } else {
+            summaryText += `All areas score well. Keep up the good work!`;
+        }
+        document.getElementById("executiveSummaryText").innerHTML = `<i class="fas fa-microphone-alt"></i> ${summaryText}`;
+
+        // Priority Issues (all)
+        let alerts = "";
+        let allSections = [
+            { name: "Workload", score: avgs.workload },
+            { name: "Management", score: avgs.management },
+            { name: "Training", score: avgs.training },
+            { name: "Work Environment", score: avgs.workEnv },
+            { name: "Job Satisfaction", score: avgs.jobSat }
+        ];
+        allSections.sort((a,b) => a.score - b.score);
+        for (let sec of allSections) {
+            if (sec.score < 2.5) alerts += `<div class="alert-card"><span class="badge badge-red">🔴 High Priority</span> ${sec.name} – ${sec.score.toFixed(1)} → Critical issue. Immediate action required.</div>`;
+            else if (sec.score < 3.5) alerts += `<div class="alert-card"><span class="badge badge-orange">🟠 Moderate Priority</span> ${sec.name} – ${sec.score.toFixed(1)} → Needs improvement.</div>`;
+        }
+        document.getElementById("alertsList").innerHTML = alerts || "<p>No critical alerts at this time.</p>";
+
+        // Section bar chart (best to worst)
+        let sectionsArr = [
+            { name: "Work Environment", score: avgs.workEnv },
+            { name: "Workload", score: avgs.workload },
+            { name: "Management", score: avgs.management },
+            { name: "Job Satisfaction", score: avgs.jobSat },
+            { name: "Training", score: avgs.training }
+        ];
+        sectionsArr.sort((a,b) => b.score - a.score);
+        let labels = sectionsArr.map(s => s.name);
+        let scores = sectionsArr.map(s => s.score);
+        if (barChart) barChart.destroy();
+        let ctx = document.getElementById("sectionChart").getContext("2d");
+        barChart = new Chart(ctx, { type:"bar", data:{ labels, datasets:[{ label:"Score (1-5)", data:scores, backgroundColor:"#2c7da0" }] }, options:{ scales:{ y:{ min:0, max:5 } } } });
+
+        // Trend over months
+        let monthMap = new Map();
+        surveys.forEach(s => {
+            let d = new Date(s.timestamp);
+            let ym = `${d.getFullYear()}-${d.getMonth()+1}`;
+            if (!monthMap.has(ym)) monthMap.set(ym, []);
+            let all = Object.values(s.ratings).flat();
+            let avg = all.reduce((a,b)=>a+b,0)/all.length;
+            monthMap.get(ym).push(avg);
+        });
+        let months = Array.from(monthMap.keys()).sort();
+        let trendData = months.map(m => monthMap.get(m).reduce((a,b)=>a+b,0)/monthMap.get(m).length);
+        if (trendChart) trendChart.destroy();
+        let trendCtx = document.getElementById("trendChart").getContext("2d");
+        trendChart = new Chart(trendCtx, { type:"line", data:{ labels: months, datasets:[{ label:"Avg Satisfaction", data:trendData, borderColor:"#e9c46a" }] } });
+
+        // Response stats
+        let roleCounts = {};
+        surveys.forEach(s => { roleCounts[s.role] = (roleCounts[s.role] || 0) + 1; });
+        let total = surveys.length;
+        let roleStats = `<div><strong>Total responses:</strong> ${total}</div><div><strong>Breakdown by role:</strong><br>`;
+        for (let [r,c] of Object.entries(roleCounts)) roleStats += `${r}: ${((c/total)*100).toFixed(0)}% (${c})<br>`;
+        roleStats += `</div>`;
+        document.getElementById("statsPanel").innerHTML = roleStats;
+
+        // Comment Insights & Sentiment (true reflection)
+        let allComments = surveys.flatMap(s=>[s.openEnded.challenge,s.openEnded.improve,s.openEnded.additional].filter(c=>c));
+        let sentiments = allComments.map(c=>sentimentAnalysis(c));
+        let pos = sentiments.filter(s=>s==="positive").length;
+        let neg = sentiments.filter(s=>s==="negative").length;
+        let neu = sentiments.filter(s=>s==="neutral").length;
+        let totalSent = sentiments.length || 1;
+        let sentimentHtml = `<div style="font-size:1.1rem;">😊 Positive ${(pos/totalSent*100).toFixed(0)}% &nbsp; 😐 Neutral ${(neu/totalSent*100).toFixed(0)}% &nbsp; 😞 Negative ${(neg/totalSent*100).toFixed(0)}%</div><div><strong>Insight:</strong> ${neg > pos ? "⚠️ Staff express more negative than positive sentiments – urgent attention needed." : (pos > neg ? "✅ Positive climate – maintain good practices." : "⚖️ Mixed feedback, focus on highlighted concerns.")}</div>`;
+        document.getElementById("sentimentBox").innerHTML = sentimentHtml;
+
+        let themes = { Staffing:0, Equipment:0, Management:0, Training:0, Cleanliness:0 };
+        allComments.forEach(c=>{
+            let low = c.toLowerCase();
+            if(low.includes("staff")||low.includes("workload")||low.includes("break")) themes.Staffing++;
+            if(low.includes("equipment")||low.includes("resource")||low.includes("tool")) themes.Equipment++;
+            if(low.includes("management")||low.includes("communication")) themes.Management++;
+            if(low.includes("training")||low.includes("career")) themes.Training++;
+            if(low.includes("clean")||low.includes("hygiene")||low.includes("infrastructure")) themes.Cleanliness++;
+        });
+        let themesHtml = `<h4>🔍 Key themes mentioned:</h4>${Object.entries(themes).filter(([_,v])=>v>0).map(([k,v])=>`<span style="background:#eef; padding:4px 16px; border-radius:30px; margin:5px; display:inline-block">${k}: ${v}</span>`).join("") || "<i>No keywords yet</i>"}`;
+        document.getElementById("themesBox").innerHTML = themesHtml;
+
+        // Recommendations
+        let recs = [];
+        if (avgs.workload < 3) recs.push("Increase staffing levels to address workload issues.");
+        if (avgs.management < 3) recs.push("Improve internal communication channels and act on staff concerns.");
+        if (avgs.training < 3) recs.push("Launch regular training programs and define career growth paths.");
+        if (avgs.workEnv < 3) recs.push("Upgrade equipment and enhance facility cleanliness.");
+        if (avgs.jobSat < 3) recs.push("Recognise staff contributions and improve morale.");
+        if (recs.length === 0) recs.push("Maintain current good practices and celebrate successes.");
+        document.getElementById("recommendationsList").innerHTML = `<ul>${recs.map(r=>`<li>${r}</li>`).join("")}</ul>`;
+
+        // Update role filter dropdown
+        let rolesSet = new Set(allSurveys.map(s=>s.role));
+        let roleSelect = document.getElementById("filterRole");
+        let currentVal = roleSelect.value;
+        roleSelect.innerHTML = '<option value="all">All roles</option>';
+        for (let r of rolesSet) roleSelect.innerHTML += `<option value="${r}">${r}</option>`;
+        roleSelect.value = currentVal;
+    }
+
+    // Report generation (comprehensive)
+    async function renderReport() {
+        let surveys = await fetchSurveys();
+        if (!surveys.length) {
+            document.getElementById("reportContent").innerHTML = "<div class='explanation-box'>No survey data available.</div>";
+            return;
+        }
+        let overall = overallScore(surveys);
+        let avgs = avgScores(surveys);
+        let allComments = surveys.flatMap(s=>[s.openEnded.challenge,s.openEnded.improve,s.openEnded.additional].filter(c=>c));
+        let sentiments = allComments.map(c=>sentimentAnalysis(c));
+        let pos = sentiments.filter(s=>s==="positive").length;
+        let neg = sentiments.filter(s=>s==="negative").length;
+        let neu = sentiments.filter(s=>s==="neutral").length;
+        let totalSent = sentiments.length || 1;
+
+        let themes = { Staffing:0, Equipment:0, Management:0, Training:0, Cleanliness:0 };
+        allComments.forEach(c=>{
+            let low = c.toLowerCase();
+            if(low.includes("staff")||low.includes("workload")) themes.Staffing++;
+            if(low.includes("equipment")||low.includes("resource")) themes.Equipment++;
+            if(low.includes("management")||low.includes("communication")) themes.Management++;
+            if(low.includes("training")||low.includes("career")) themes.Training++;
+            if(low.includes("clean")||low.includes("hygiene")) themes.Cleanliness++;
+        });
+
+        let html = `<div class="explanation-box"><strong>Report generated:</strong> ${new Date().toLocaleString()} | <strong>Total responses:</strong> ${surveys.length}</div>`;
+        html += `<h3>Overall Satisfaction: ${overall.toFixed(1)}/5 (${textScore(overall)})</h3>`;
+        html += `<h4>Section Scores</h4><ul>`;
+        html += `<li>Work Environment: ${avgs.workEnv.toFixed(1)}/5 – ${textScore(avgs.workEnv)}</li>`;
+        html += `<li>Workload & Staffing: ${avgs.workload.toFixed(1)}/5 – ${textScore(avgs.workload)}</li>`;
+        html += `<li>Management & Leadership: ${avgs.management.toFixed(1)}/5 – ${textScore(avgs.management)}</li>`;
+        html += `<li>Job Satisfaction: ${avgs.jobSat.toFixed(1)}/5 – ${textScore(avgs.jobSat)}</li>`;
+        html += `<li>Training & Development: ${avgs.training.toFixed(1)}/5 – ${textScore(avgs.training)}</li>`;
+        html += `</ul>`;
+
+        html += `<h4>Priority Issues (All)</h4><ul>`;
+        let allSections = [
+            { name: "Workload", score: avgs.workload },
+            { name: "Management", score: avgs.management },
+            { name: "Training", score: avgs.training },
+            { name: "Work Environment", score: avgs.workEnv },
+            { name: "Job Satisfaction", score: avgs.jobSat }
+        ];
+        allSections.sort((a,b) => a.score - b.score);
+        for (let sec of allSections) {
+            if (sec.score < 2.5) html += `<li><span class="badge badge-red">High Priority</span> ${sec.name}: ${sec.score.toFixed(1)}</li>`;
+            else if (sec.score < 3.5) html += `<li><span class="badge badge-orange">Moderate Priority</span> ${sec.name}: ${sec.score.toFixed(1)}</li>`;
+            else html += `<li><span class="badge badge-green">Good</span> ${sec.name}: ${sec.score.toFixed(1)}</li>`;
+        }
+        html += `</ul>`;
+
+        html += `<h4>Sentiment Summary</h4><p>😊 Positive: ${(pos/totalSent*100).toFixed(0)}% &nbsp; 😐 Neutral: ${(neu/totalSent*100).toFixed(0)}% &nbsp; 😞 Negative: ${(neg/totalSent*100).toFixed(0)}%</p>`;
+        html += `<h4>Top Themes from Comments</h4><ul>`;
+        for (let [k,v] of Object.entries(themes)) if(v>0) html += `<li>${k}: ${v} mentions</li>`;
+        html += `</ul>`;
+
+        html += `<h4>Recommendations</h4><ul>`;
+        if (avgs.workload < 3) html += `<li>🔹 Increase staffing levels and review workload distribution.</li>`;
+        if (avgs.management < 3) html += `<li>🔹 Establish regular staff meetings and anonymous feedback channels.</li>`;
+        if (avgs.training < 3) html += `<li>🔹 Launch monthly training workshops and define clear career paths.</li>`;
+        if (avgs.workEnv < 3) html += `<li>🔹 Upgrade essential equipment and improve facility cleanliness.</li>`;
+        if (avgs.jobSat < 3) html += `<li>🔹 Implement staff recognition programs and improve morale.</li>`;
+        if (avgs.workload >= 3 && avgs.management >= 3 && avgs.training >= 3) html += `<li>✅ Continue maintaining good practices and celebrate successes.</li>`;
+        html += `</ul><hr><small>Data stored securely. Report generated from live survey responses.</small>`;
+        document.getElementById("reportContent").innerHTML = html;
+    }
+
+    // Build survey questions (original style)
+    function buildSurveyQuestions() {
+        let sectionsArr = [
+            { name: "Work Environment", key: "workEnv", questions: ["I have the resources and equipment I need to do my job effectively","My work environment is safe and supportive","I am satisfied with the cleanliness and infrastructure of the facility"] },
+            { name: "Workload & Staffing", key: "workload", questions: ["My workload is manageable","There are enough staff to provide quality care","I am able to take adequate breaks during my shifts"] },
+            { name: "Management & Leadership", key: "management", questions: ["Management communicates effectively with staff","My concerns are listened to and addressed","I feel supported by my supervisors"] },
+            { name: "Job Satisfaction", key: "jobSat", questions: ["I feel valued for the work I do","I am satisfied with my job overall","I would recommend this facility as a good place to work"] },
+            { name: "Training & Development", key: "training", questions: ["I have access to training opportunities","I am satisfied with career growth opportunities"] }
+        ];
+        let html = "";
+        for(let sec of sectionsArr){
+            html += `<div class="section-title">${sec.name}</div>`;
+            html += `<div class="scale-hint"><i class="fas fa-info-circle"></i> Scale: 1=Strongly Disagree, 2=Disagree, 3=Neutral, 4=Agree, 5=Strongly Agree</div>`;
+            sec.questions.forEach((q, idx) => {
+                html += `<div class="rating-row"><div class="rating-label">${q}</div><div class="rating-options">`;
+                for(let val=1; val<=5; val++){
+                    let label = val===1?"SD":val===2?"D":val===3?"N":val===4?"A":"SA";
+                    html += `<label><input type="radio" name="${sec.key}_${idx}" value="${val}" required> <span>${val} (${label})</span></label>`;
+                }
+                html += `</div></div>`;
+            });
+        }
+        document.getElementById("dynamicQuestions").innerHTML = html;
+    }
+
+    // Submit survey
+    async function postSurvey(data) {
+        const res = await fetch(`${API_BASE}/submit`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data) });
+        return res.ok;
+    }
+
+    // Navigation
+    function showPage(id){ document.querySelectorAll("#app > div").forEach(div=>div.classList.add("hidden")); document.getElementById(id).classList.remove("hidden"); }
+
+    // Event listeners
+    document.getElementById("startSurveyBtn").onclick = () => { showPage("surveyPage"); buildSurveyQuestions(); };
+    document.getElementById("adminLoginBtn").onclick = () => {
+        document.getElementById("adminPassword").value = '';
+        document.getElementById("adminModal").style.display = "flex";
+    };
+    document.getElementById("modalCancelBtn").onclick = () => {
+        document.getElementById("adminPassword").value = '';
+        document.getElementById("adminModal").style.display = "none";
+    };
+    document.getElementById("modalLoginBtn").onclick = () => {
+        let pwd = document.getElementById("adminPassword").value;
+        if(pwd === "admin123"){ adminLogged=true; document.getElementById("adminModal").style.display="none"; showPage("adminDashboard"); renderDashboard(); }
+        else showModal("Login Failed", "Wrong password. Access denied.");
+    };
+    document.getElementById("cancelSurveyBtn").onclick = () => showPage("landingPage");
+    document.getElementById("homeBtn").onclick = () => showPage("landingPage");
+    document.getElementById("logoutAdminBtn").onclick = () => { adminLogged=false; showPage("landingPage"); };
+    document.getElementById("genReportBtn").onclick = async () => { if(adminLogged){ await renderReport(); showPage("reportPage"); } };
+    document.getElementById("backToDashboard").onclick = () => { showPage("adminDashboard"); renderDashboard(); };
+    document.getElementById("printReportBtn").onclick = () => window.print();
+    document.getElementById("resetDataBtn").onclick = () => { if(adminLogged) resetAllData(); };
+    document.getElementById("downloadCsvBtn").onclick = () => { if(adminLogged) exportCSV(); };
+    document.getElementById("backupBtn").onclick = () => { if(adminLogged) backupData(); };
+    document.getElementById("recoverBtn").onclick = () => { if(adminLogged) recoverData(); };
+    document.getElementById("applyFiltersBtn").onclick = () => renderDashboard();
+    document.getElementById("resetFiltersBtn").onclick = () => { document.getElementById("filterRole").value = "all"; document.getElementById("filterMonth").value = ""; renderDashboard(); };
+
+    document.getElementById("surveyForm").addEventListener("submit", async (e) => {
+        e.preventDefault();
+        let role = document.getElementById("roleText").value.trim();
+        let years = document.getElementById("yearsSelect").value;
+        if(!role || !years) return showModal("Missing Info", "Please enter role and select years.");
+        let ratings = {};
+        let sectionsArr = ["workEnv","workload","management","jobSat","training"];
+        for(let sec of sectionsArr){
+            let arr = [];
+            let qCount = (sec === "training") ? 2 : 3;
+            for(let i=0; i<qCount; i++){
+                let val = document.querySelector(`input[name="${sec}_${i}"]:checked`);
+                if(!val) return showModal("Incomplete", `Please answer all questions in ${sec}`);
+                arr.push(parseInt(val.value));
+            }
+            ratings[sec] = arr;
+        }
+        let openEnded = {
+            challenge: document.getElementById("challengeText").value,
+            improve: document.getElementById("improveText").value,
+            additional: document.getElementById("additionalText").value
+        };
+        let ok = await postSurvey({ role, years, ratings, openEnded });
+        if(ok){ showPage("thankyouPage"); document.getElementById("surveyForm").reset(); }
+        else showModal("Submission Error", "Could not save survey. Is the Flask server running?");
+    });
+
+    showPage("landingPage");
+</script>
+</body>
+</html>
